@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
   renderTaskList();
   updateDashboard();
 
-  // 授業追加モーダル
   document.getElementById('btn-add-course').addEventListener('click', function() {
     document.getElementById('modal-add-course').style.display = 'flex';
   });
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   document.getElementById('btn-submit-course').addEventListener('click', submitCourse);
 
-  // 課題追加モーダル（ダッシュボードから）
   document.getElementById('btn-add-task').addEventListener('click', function() {
     openTaskModal(null);
   });
@@ -34,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   document.getElementById('btn-submit-task').addEventListener('click', submitTask);
 
-  // 年度・学期切り替え
   document.getElementById('year-select').addEventListener('change', function() {
     currentYear = this.value;
     renderTimetable();
@@ -51,23 +48,55 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// 授業形式によって曜日・時限の表示切り替え
+function toggleDayPeriod(format) {
+  const row = document.getElementById('day-period-row');
+  row.style.display = format === 'ondemand' ? 'none' : 'block';
+}
+
+// 形式→色タイプのマッピング
+function formatToColor(format) {
+  const map = { face:'blue', media:'green', trial:'red', ondemand:'purple', hybrid:'orange' };
+  return map[format] || 'blue';
+}
+
 // --- 時間割描画 ---
 function renderTimetable() {
   document.querySelectorAll('.course-slot').forEach(function(slot) {
     slot.innerHTML = '';
   });
+
   const courses = getFilteredCourses(currentYear, currentSemester);
+  const ondemandList = document.getElementById('ondemand-list');
+  ondemandList.innerHTML = '';
+
   courses.forEach(function(course) {
-    const slot = document.querySelector(
-      `.course-slot[data-day="${course.day}"][data-period="${course.period}"]`
-    );
-    if (slot) slot.innerHTML = createCourseCardHTML(course);
+    if (course.format === 'ondemand') {
+      const card = document.createElement('div');
+      card.className = 'ondemand-card color-' + formatToColor(course.format);
+      card.innerHTML = `
+        <span class="course-name">${course.name}</span>
+        <span class="course-meta">${course.teacher || ''}</span>
+      `;
+      card.onclick = function() { openCourseDetail(course.id); };
+      ondemandList.appendChild(card);
+    } else {
+      const slot = document.querySelector(
+        `.course-slot[data-day="${course.day}"][data-period="${course.period}"]`
+      );
+      if (slot) slot.innerHTML = createCourseCardHTML(course);
+    }
   });
+
+  if (ondemandList.children.length === 0) {
+    ondemandList.innerHTML = '<p class="ondemand-empty">オンデマンド授業なし</p>';
+  }
 }
 
 function createCourseCardHTML(course) {
+  const colorType = formatToColor(course.format || 'face');
   return `
-    <div class="course-card color-${course.colorType}" onclick="openCourseDetail('${course.id}')">
+    <div class="course-card color-${colorType}" onclick="openCourseDetail('${course.id}')">
       <span class="course-arrow">→</span>
       <div class="course-name">${course.name}</div>
       <div class="course-meta">${course.teacher || ''}<br>${course.room || ''}</div>
@@ -79,14 +108,16 @@ function createCourseCardHTML(course) {
 function submitCourse() {
   const name = document.getElementById('input-name').value.trim();
   if (!name) { alert('科目名を入力してください'); return; }
+  const format = document.getElementById('input-format').value;
   const course = {
     name,
     year: currentYear,
     semester: currentSemester,
-    day: document.getElementById('input-day').value,
-    period: document.getElementById('input-period').value,
+    format,
+    colorType: formatToColor(format),
+    day: format === 'ondemand' ? null : document.getElementById('input-day').value,
+    period: format === 'ondemand' ? null : document.getElementById('input-period').value,
     credits: document.getElementById('input-credits').value,
-    colorType: document.getElementById('input-color').value,
     teacher: document.getElementById('input-teacher').value.trim(),
     room: document.getElementById('input-room').value.trim(),
     completed: false,
@@ -118,9 +149,8 @@ function renderTaskList() {
     const courseName = course ? course.name : '不明';
     const days = daysUntilDeadline(task.deadline);
     const urgencyClass = days <= 0 ? 'urgent' : days <= 3 ? 'warning' : '';
-    const urgencyLabel = days <= 0 ? '今日締切！' : days <= 3 ? `あと${days}日` : `あと${days}日`;
+    const urgencyLabel = days <= 0 ? '今日締切！' : `あと${days}日`;
     const typeLabel = task.type === 'report' ? 'レポート' : task.type === 'quiz' ? '小テスト' : 'その他';
-
     return `
       <div class="task-card ${urgencyClass}">
         <div class="task-top">
@@ -147,37 +177,28 @@ function renderTaskList() {
   }).join('');
 }
 
-// --- スタンプ処理 ---
 function handleStamp(taskId) {
   toggleStamp(taskId);
   renderTaskList();
   updateDashboard();
 }
 
-// --- 課題追加モーダルを開く ---
 function openTaskModal(courseId) {
-  // 授業のセレクトを現在の学期の授業で更新
   const courses = getFilteredCourses(currentYear, currentSemester);
   const select = document.getElementById('input-task-course');
   select.innerHTML = courses.map(c =>
     `<option value="${c.id}" ${courseId === c.id ? 'selected' : ''}>${c.name}</option>`
   ).join('');
-  if (courses.length === 0) {
-    alert('先に授業を登録してください');
-    return;
-  }
+  if (courses.length === 0) { alert('先に授業を登録してください'); return; }
   document.getElementById('modal-add-task').style.display = 'flex';
 }
 
-// --- 課題追加送信 ---
 function submitTask() {
   const title = document.getElementById('input-task-title').value.trim();
-  const courseId = document.getElementById('input-task-course').value;
   const deadline = document.getElementById('input-task-deadline').value;
   if (!title || !deadline) { alert('課題名と締切日を入力してください'); return; }
-
   addTask({
-    courseId,
+    courseId: document.getElementById('input-task-course').value,
     title,
     type: document.getElementById('input-task-type').value,
     deadline,
@@ -195,11 +216,8 @@ function submitTask() {
 // --- ダッシュボード更新 ---
 function updateDashboard() {
   const tasks = getFilteredTasks(currentYear, currentSemester).filter(t => !t.stamped);
-  const reportCount = tasks.filter(t => t.type === 'report').length;
-  const quizCount = tasks.filter(t => t.type === 'quiz').length;
-  document.getElementById('report-count').textContent = reportCount;
-  document.getElementById('quiz-count').textContent = quizCount;
-
+  document.getElementById('report-count').textContent = tasks.filter(t => t.type === 'report').length;
+  document.getElementById('quiz-count').textContent = tasks.filter(t => t.type === 'quiz').length;
   const courses = getFilteredCourses(currentYear, currentSemester);
   const totalCredits = courses.filter(c => c.completed).reduce((sum, c) => sum + Number(c.credits), 0);
   document.getElementById('credit-count').textContent = totalCredits;
