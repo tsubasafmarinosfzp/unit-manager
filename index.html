@@ -32,7 +32,6 @@
 
   <main class="app-main">
 
-    <!-- ダッシュボードバー -->
     <section class="dashboard-bar">
       <div class="dash-card">
         <span class="dash-count" id="report-count">0</span>
@@ -48,7 +47,6 @@
       </div>
     </section>
 
-    <!-- 課題一覧 -->
     <section class="task-section">
       <div class="section-header">
         <h2 class="section-title">課題一覧</h2>
@@ -57,7 +55,6 @@
       <div id="task-list"></div>
     </section>
 
-    <!-- 時間割グリッド -->
     <section class="timetable-section">
       <div class="timetable-wrapper">
         <div class="timetable-grid">
@@ -126,6 +123,13 @@
           <div class="cell course-slot" data-day="sat" data-period="7"></div>
         </div>
       </div>
+
+      <!-- オンデマンドセクション -->
+      <div class="ondemand-section">
+        <div class="ondemand-label">オンデマンド</div>
+        <div id="ondemand-list" class="ondemand-list"></div>
+      </div>
+
       <button class="btn-add-course" id="btn-add-course">＋ 授業を追加</button>
     </section>
 
@@ -143,29 +147,41 @@
           <label class="form-label">科目名</label>
           <input type="text" id="input-name" class="form-input" placeholder="例：経営社会学">
         </div>
-        <div class="form-row two-col">
-          <div>
-            <label class="form-label">曜日</label>
-            <select id="input-day" class="form-input">
-              <option value="mon">月</option>
-              <option value="tue">火</option>
-              <option value="wed">水</option>
-              <option value="thu">木</option>
-              <option value="fri">金</option>
-              <option value="sat">土</option>
-            </select>
-          </div>
-          <div>
-            <label class="form-label">時限</label>
-            <select id="input-period" class="form-input">
-              <option value="1">1限</option>
-              <option value="2">2限</option>
-              <option value="3">3限</option>
-              <option value="4">4限</option>
-              <option value="5">5限</option>
-              <option value="6">6限</option>
-              <option value="7">7限</option>
-            </select>
+        <div class="form-row">
+          <label class="form-label">授業形式</label>
+          <select id="input-format" class="form-input" onchange="toggleDayPeriod(this.value)">
+            <option value="face">対面（青）</option>
+            <option value="media">メディア（緑）</option>
+            <option value="trial">仮参加（赤）</option>
+            <option value="ondemand">オンデマンド（紫）</option>
+            <option value="hybrid">対面＋オンデマンド併用（オレンジ）</option>
+          </select>
+        </div>
+        <div id="day-period-row">
+          <div class="form-row two-col">
+            <div>
+              <label class="form-label">曜日</label>
+              <select id="input-day" class="form-input">
+                <option value="mon">月</option>
+                <option value="tue">火</option>
+                <option value="wed">水</option>
+                <option value="thu">木</option>
+                <option value="fri">金</option>
+                <option value="sat">土</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">時限</label>
+              <select id="input-period" class="form-input">
+                <option value="1">1限</option>
+                <option value="2">2限</option>
+                <option value="3">3限</option>
+                <option value="4">4限</option>
+                <option value="5">5限</option>
+                <option value="6">6限</option>
+                <option value="7">7限</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="form-row two-col">
@@ -176,14 +192,6 @@
               <option value="2">2単位</option>
               <option value="3">3単位</option>
               <option value="4">4単位</option>
-            </select>
-          </div>
-          <div>
-            <label class="form-label">種別</label>
-            <select id="input-color" class="form-input">
-              <option value="blue">履修登録（青）</option>
-              <option value="green">メディア（緑）</option>
-              <option value="red">仮参加（赤）</option>
             </select>
           </div>
         </div>
