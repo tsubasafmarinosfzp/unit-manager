@@ -606,3 +606,193 @@ body {
 }
 
 .stamp-owl.stamped .owl-text { color: #c0392b; }
+
+/* =====================
+   授業詳細ページ
+   ===================== */
+.btn-back {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.detail-section {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.detail-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-label {
+  font-size: 11px;
+  color: #888;
+}
+
+.info-val {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.btn-edit-small, .btn-add-small {
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid #2d2580;
+  border-radius: 16px;
+  background: transparent;
+  color: #2d2580;
+  cursor: pointer;
+}
+
+.btn-submit-small {
+  width: 100%;
+  padding: 10px;
+  background: #2d2580;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+}
+
+.btn-remove:hover { color: #E24B4A; }
+
+.empty-text {
+  font-size: 13px;
+  color: #aaa;
+  padding: 8px 0;
+}
+
+/* 評価方法 */
+.eval-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 0.5px solid #eee;
+  font-size: 14px;
+}
+
+.eval-pct { font-weight: 600; color: #2d2580; }
+
+.eval-item-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.eval-total {
+  font-size: 13px;
+  color: #666;
+  margin: 8px 0;
+}
+
+/* 出席記録 */
+.attendance-counts {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.att-present { color: #1D9E75; }
+.att-absent  { color: #E24B4A; }
+
+.att-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 0.5px solid #eee;
+}
+
+.att-date { font-size: 13px; color: #444; flex: 1; }
+
+.att-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 99px;
+}
+
+.att-present.att-status { background: #ddf5ec; }
+.att-absent.att-status  { background: #ffdddd; }
+
+/* メモ */
+.note-card {
+  background: #f8f8fc;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #eee;
+}
+
+.note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.note-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #2d2580;
+}
+
+.note-title-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  outline: none;
+}
+
+.note-textarea {
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  color: #333;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.slide-link {
+  display: inline-block;
+  font-size: 12px;
+  color: #2d2580;
+  margin-bottom: 8px;
+  text-decoration: none;
+}
