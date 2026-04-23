@@ -320,3 +320,29 @@ function deleteFreeNote(idx) {
   saveFreeNotes(notes);
   renderFreeNotes();
 }
+
+// --- 取得済みトグル ---
+function toggleComplete() {
+  const courses = getCourses();
+  const course = courses.find(c => c.id === courseId);
+  if (!course) return;
+  course.completed = !course.completed;
+  saveCourses(courses);
+  const btn = document.getElementById('btn-complete');
+  if (course.completed) {
+    btn.textContent = '✓ 取得済み';
+    btn.classList.add('completed');
+  } else {
+    btn.textContent = '単位を取得済みにする';
+    btn.classList.remove('completed');
+  }
+}
+
+// 初期状態を反映
+document.addEventListener('DOMContentLoaded', function() {
+  const course = getCourses().find(c => c.id === courseId);
+  if (course && course.completed) {
+    const btn = document.getElementById('btn-complete');
+    if (btn) { btn.textContent = '✓ 取得済み'; btn.classList.add('completed'); }
+  }
+}, { once: false });
