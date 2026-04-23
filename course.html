@@ -1,145 +1,348 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>授業詳細</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+// =====================
+// course.js — 授業詳細ページの動き
+// =====================
 
-  <header class="app-header">
-    <div class="header-inner">
-      <button class="btn-back" onclick="history.back()">← 戻る</button>
-      <span class="app-logo" id="course-title">授業詳細</span>
-      <div style="width:60px"></div>
+// URLからcourseIdを取得
+const params = new URLSearchParams(location.search);
+const courseId = params.get('id');
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (!courseId) { location.href = 'index.html'; return; }
+
+  renderCourseInfo();
+  renderEvalDisplay();
+  renderAttendance();
+  renderCourseTasks();
+  renderSessions();
+  renderFreeNotes();
+
+  // 評価方法
+  document.getElementById('btn-edit-eval').addEventListener('click', toggleEvalForm);
+  document.getElementById('btn-add-eval-item').addEventListener('click', addEvalItem);
+  document.getElementById('btn-save-eval').addEventListener('click', saveEval);
+
+  // 出席
+  document.getElementById('btn-add-attendance').addEventListener('click', function() {
+    document.getElementById('input-att-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('modal-attendance').style.display = 'flex';
+  });
+  document.getElementById('modal-att-close').addEventListener('click', function() {
+    document.getElementById('modal-attendance').style.display = 'none';
+  });
+  document.getElementById('btn-submit-attendance').addEventListener('click', submitAttendance);
+
+  // 課題
+  document.getElementById('btn-add-task-detail').addEventListener('click', function() {
+    document.getElementById('modal-task-detail').style.display = 'flex';
+  });
+  document.getElementById('modal-task-detail-close').addEventListener('click', function() {
+    document.getElementById('modal-task-detail').style.display = 'none';
+  });
+  document.getElementById('btn-submit-detail-task').addEventListener('click', submitDetailTask);
+
+  // メモ
+  document.getElementById('btn-add-session').addEventListener('click', addSession);
+  document.getElementById('btn-add-free-note').addEventListener('click', addFreeNote);
+});
+
+// --- 授業基本情報 ---
+function renderCourseInfo() {
+  const course = getCourses().find(c => c.id === courseId);
+  if (!course) return;
+  document.getElementById('course-title').textContent = course.name;
+  document.title = course.name;
+  const dayMap = {mon:'月',tue:'火',wed:'水',thu:'木',fri:'金',sat:'土'};
+  const colorMap = {blue:'履修登録',green:'メディア',red:'仮参加'};
+  document.getElementById('course-info').innerHTML = `
+    <div class="info-item"><span class="info-label">担当教員</span><span class="info-val">${course.teacher||'—'}</span></div>
+    <div class="info-item"><span class="info-label">教室</span><span class="info-val">${course.room||'—'}</span></div>
+    <div class="info-item"><span class="info-label">曜日・時限</span><span class="info-val">${dayMap[course.day]}曜 ${course.period}限</span></div>
+    <div class="info-item"><span class="info-label">単位数</span><span class="info-val">${course.credits}単位</span></div>
+    <div class="info-item"><span class="info-label">種別</span><span class="info-val">${colorMap[course.colorType]||'—'}</span></div>
+  `;
+}
+
+// --- 評価方法 ---
+function getEval() {
+  const data = localStorage.getItem('eval_' + courseId);
+  return data ? JSON.parse(data) : [];
+}
+function saveEvalData(items) {
+  localStorage.setItem('eval_' + courseId, JSON.stringify(items));
+}
+function renderEvalDisplay() {
+  const items = getEval();
+  const el = document.getElementById('eval-display');
+  if (items.length === 0) {
+    el.innerHTML = '<p class="empty-text">評価方法が登録されていません</p>';
+    return;
+  }
+  el.innerHTML = items.map(item => `
+    <div class="eval-row">
+      <span class="eval-name">${item.name}</span>
+      <span class="eval-pct">${item.pct}%</span>
     </div>
-  </header>
+  `).join('');
+}
+function toggleEvalForm() {
+  const form = document.getElementById('eval-form');
+  const display = document.getElementById('eval-display');
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    display.style.display = 'none';
+    const items = getEval();
+    document.getElementById('eval-items').innerHTML = '';
+    items.forEach(item => addEvalItemRow(item.name, item.pct));
+    updateEvalTotal();
+  } else {
+    form.style.display = 'none';
+    display.style.display = 'block';
+  }
+}
+function addEvalItem() { addEvalItemRow('', ''); }
+function addEvalItemRow(name, pct) {
+  const div = document.createElement('div');
+  div.className = 'eval-item-row';
+  div.innerHTML = `
+    <input type="text" class="form-input eval-name-input" placeholder="例：期末試験" value="${name}">
+    <input type="number" class="form-input eval-pct-input" placeholder="%" min="0" max="100" value="${pct}" style="width:80px">
+    <button class="btn-remove" onclick="this.parentElement.remove();updateEvalTotal()">✕</button>
+  `;
+  document.getElementById('eval-items').appendChild(div);
+  div.querySelector('.eval-pct-input').addEventListener('input', updateEvalTotal);
+}
+function updateEvalTotal() {
+  const inputs = document.querySelectorAll('.eval-pct-input');
+  const total = Array.from(inputs).reduce((s, i) => s + (Number(i.value)||0), 0);
+  const el = document.getElementById('eval-total');
+  el.textContent = total;
+  el.style.color = total === 100 ? '#1D9E75' : total > 100 ? '#E24B4A' : '#f0a500';
+}
+function saveEval() {
+  const names = document.querySelectorAll('.eval-name-input');
+  const pcts = document.querySelectorAll('.eval-pct-input');
+  const items = Array.from(names).map((n, i) => ({
+    name: n.value.trim(),
+    pct: Number(pcts[i].value)||0
+  })).filter(item => item.name);
+  saveEvalData(items);
+  toggleEvalForm();
+  renderEvalDisplay();
+}
 
-  <main class="app-main">
-
-    <!-- 授業基本情報 -->
-    <section class="detail-section">
-      <div class="detail-info-grid" id="course-info"></div>
-    </section>
-
-    <!-- 評価方法 -->
-    <section class="detail-section">
-      <div class="section-header">
-        <h2 class="section-title">評価方法</h2>
-        <button class="btn-edit-small" id="btn-edit-eval">編集</button>
-      </div>
-      <div id="eval-display"></div>
-      <div id="eval-form" style="display:none">
-        <div id="eval-items"></div>
-        <button class="btn-add-small" id="btn-add-eval-item">＋ 項目を追加</button>
-        <div class="eval-total">合計: <span id="eval-total">0</span>%</div>
-        <button class="btn-submit-small" id="btn-save-eval">保存</button>
-      </div>
-    </section>
-
-    <!-- 出席記録 -->
-    <section class="detail-section">
-      <div class="section-header">
-        <h2 class="section-title">出席記録</h2>
-        <div class="attendance-counts">
-          <span class="att-present">出席 <strong id="att-present-count">0</strong>回</span>
-          <span class="att-absent">欠席 <strong id="att-absent-count">0</strong>回</span>
-        </div>
-      </div>
-      <div id="attendance-list"></div>
-      <button class="btn-add-small" id="btn-add-attendance">＋ 出席を記録</button>
-    </section>
-
-    <!-- 課題一覧 -->
-    <section class="detail-section">
-      <div class="section-header">
-        <h2 class="section-title">課題</h2>
-        <button class="btn-add-small" id="btn-add-task-detail">＋ 課題を追加</button>
-      </div>
-      <div id="course-task-list"></div>
-    </section>
-
-    <!-- 回別メモ -->
-    <section class="detail-section">
-      <div class="section-header">
-        <h2 class="section-title">回別メモ</h2>
-        <button class="btn-add-small" id="btn-add-session">＋ 回を追加</button>
-      </div>
-      <div id="session-list"></div>
-    </section>
-
-    <!-- フリーメモ -->
-    <section class="detail-section">
-      <div class="section-header">
-        <h2 class="section-title">フリーメモ</h2>
-        <button class="btn-add-small" id="btn-add-free-note">＋ メモを追加</button>
-      </div>
-      <div id="free-note-list"></div>
-    </section>
-
-  </main>
-
-  <!-- 出席追加モーダル -->
-  <div class="modal-overlay" id="modal-attendance" style="display:none">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 class="modal-title">出席を記録</h2>
-        <button class="modal-close" id="modal-att-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="form-row">
-          <label class="form-label">日付</label>
-          <input type="date" id="input-att-date" class="form-input">
-        </div>
-        <div class="form-row">
-          <label class="form-label">状況</label>
-          <select id="input-att-status" class="form-input">
-            <option value="present">出席</option>
-            <option value="absent">欠席</option>
-          </select>
-        </div>
-        <button class="btn-submit" id="btn-submit-attendance">記録する</button>
-      </div>
+// --- 出席記録 ---
+function getAttendance() {
+  const data = localStorage.getItem('attendance_' + courseId);
+  return data ? JSON.parse(data) : [];
+}
+function saveAttendance(records) {
+  localStorage.setItem('attendance_' + courseId, JSON.stringify(records));
+}
+function renderAttendance() {
+  const records = getAttendance().sort((a,b) => new Date(b.date)-new Date(a.date));
+  const presentCount = records.filter(r => r.status === 'present').length;
+  const absentCount = records.filter(r => r.status === 'absent').length;
+  document.getElementById('att-present-count').textContent = presentCount;
+  document.getElementById('att-absent-count').textContent = absentCount;
+  const el = document.getElementById('attendance-list');
+  if (records.length === 0) {
+    el.innerHTML = '<p class="empty-text">出席記録がありません</p>';
+    return;
+  }
+  el.innerHTML = records.map((r, i) => `
+    <div class="att-row">
+      <span class="att-date">${r.date}</span>
+      <span class="att-status ${r.status === 'present' ? 'att-present' : 'att-absent'}">
+        ${r.status === 'present' ? '出席' : '欠席'}
+      </span>
+      <button class="btn-remove" onclick="deleteAttendance(${i})">✕</button>
     </div>
-  </div>
+  `).join('');
+}
+function submitAttendance() {
+  const date = document.getElementById('input-att-date').value;
+  const status = document.getElementById('input-att-status').value;
+  if (!date) { alert('日付を選んでください'); return; }
+  const records = getAttendance();
+  records.push({ date, status });
+  saveAttendance(records);
+  document.getElementById('modal-attendance').style.display = 'none';
+  renderAttendance();
+}
+function deleteAttendance(idx) {
+  const records = getAttendance().sort((a,b) => new Date(b.date)-new Date(a.date));
+  records.splice(idx, 1);
+  saveAttendance(records);
+  renderAttendance();
+}
 
-  <!-- 課題追加モーダル -->
-  <div class="modal-overlay" id="modal-task-detail" style="display:none">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 class="modal-title">課題を追加</h2>
-        <button class="modal-close" id="modal-task-detail-close">✕</button>
+// --- 課題一覧 ---
+function renderCourseTasks() {
+  const tasks = getTasksByCourse(courseId).sort((a,b) => new Date(a.deadline)-new Date(b.deadline));
+  const el = document.getElementById('course-task-list');
+  if (tasks.length === 0) {
+    el.innerHTML = '<p class="empty-text">課題がありません</p>';
+    return;
+  }
+  el.innerHTML = tasks.map(task => {
+    const days = daysUntilDeadline(task.deadline);
+    const urgencyClass = days <= 0 ? 'urgent' : days <= 3 ? 'warning' : '';
+    const typeLabel = task.type === 'report' ? 'レポート' : task.type === 'quiz' ? '小テスト' : 'その他';
+    return `
+      <div class="task-card ${urgencyClass}">
+        <div class="task-top">
+          <span class="task-type-badge type-${task.type}">${typeLabel}</span>
+          <span class="task-deadline ${urgencyClass}">${days <= 0 ? '今日締切！' : 'あと'+days+'日'}</span>
+        </div>
+        <div class="task-title">${task.title}</div>
+        <div class="task-bottom">
+          <span class="task-date">締切: ${task.deadline}</span>
+          <button class="stamp-btn" onclick="handleCourseStamp('${task.id}')">
+            <div class="stamp-owl ${task.stamped ? 'stamped' : 'unstamped'}">
+              <div class="owl-body"></div>
+              <div class="owl-eyes"><div class="owl-eye"></div><div class="owl-eye"></div></div>
+              <div class="owl-beak"></div>
+              <div class="owl-text">${task.stamped ? '済' : '提出'}</div>
+            </div>
+          </button>
+        </div>
       </div>
-      <div class="modal-body">
-        <div class="form-row">
-          <label class="form-label">課題名</label>
-          <input type="text" id="input-detail-task-title" class="form-input" placeholder="例：第2章レポート">
-        </div>
-        <div class="form-row">
-          <label class="form-label">種別</label>
-          <select id="input-detail-task-type" class="form-input">
-            <option value="report">レポート</option>
-            <option value="quiz">小テスト</option>
-            <option value="other">その他</option>
-          </select>
-        </div>
-        <div class="form-row two-col">
-          <div>
-            <label class="form-label">締切日</label>
-            <input type="date" id="input-detail-task-deadline" class="form-input">
-          </div>
-          <div>
-            <label class="form-label">やる予定日</label>
-            <input type="date" id="input-detail-task-planned" class="form-input">
-          </div>
-        </div>
-        <button class="btn-submit" id="btn-submit-detail-task">追加する</button>
+    `;
+  }).join('');
+}
+function handleCourseStamp(taskId) {
+  toggleStamp(taskId);
+  renderCourseTasks();
+}
+function submitDetailTask() {
+  const title = document.getElementById('input-detail-task-title').value.trim();
+  const deadline = document.getElementById('input-detail-task-deadline').value;
+  if (!title || !deadline) { alert('課題名と締切日を入力してください'); return; }
+  addTask({
+    courseId,
+    title,
+    type: document.getElementById('input-detail-task-type').value,
+    deadline,
+    plannedDate: document.getElementById('input-detail-task-planned').value,
+    memo: '',
+  });
+  document.getElementById('modal-task-detail').style.display = 'none';
+  document.getElementById('input-detail-task-title').value = '';
+  document.getElementById('input-detail-task-deadline').value = '';
+  renderCourseTasks();
+}
+
+// --- 回別メモ ---
+function getSessions() {
+  const data = localStorage.getItem('sessions_' + courseId);
+  return data ? JSON.parse(data) : [];
+}
+function saveSessions(sessions) {
+  localStorage.setItem('sessions_' + courseId, JSON.stringify(sessions));
+}
+function renderSessions() {
+  const sessions = getSessions();
+  const el = document.getElementById('session-list');
+  if (sessions.length === 0) {
+    el.innerHTML = '<p class="empty-text">回別メモがありません</p>';
+    return;
+  }
+  el.innerHTML = sessions.map((s, i) => `
+    <div class="note-card">
+      <div class="note-header">
+        <span class="note-label">第${s.no}回</span>
+        <button class="btn-remove" onclick="deleteSession(${i})">✕</button>
       </div>
+      ${s.slideUrl ? `<a href="${s.slideUrl}" target="_blank" class="slide-link">📎 スライドを開く</a>` : ''}
+      <textarea class="note-textarea" placeholder="要約・メモを入力..." onchange="updateSession(${i},'content',this.value)">${s.content||''}</textarea>
+      <input type="url" class="form-input" placeholder="スライドURL" value="${s.slideUrl||''}" onchange="updateSession(${i},'slideUrl',this.value)" style="margin-top:6px;font-size:12px">
     </div>
-  </div>
+  `).join('');
+}
+function addSession() {
+  const sessions = getSessions();
+  sessions.push({ no: sessions.length + 1, content: '', slideUrl: '' });
+  saveSessions(sessions);
+  renderSessions();
+}
+function updateSession(idx, key, val) {
+  const sessions = getSessions();
+  sessions[idx][key] = val;
+  saveSessions(sessions);
+}
+function deleteSession(idx) {
+  const sessions = getSessions();
+  sessions.splice(idx, 1);
+  sessions.forEach((s, i) => s.no = i + 1);
+  saveSessions(sessions);
+  renderSessions();
+}
 
-  <script src="data.js"></script>
-  <script src="course.js"></script>
-</body>
-</html>
+// --- フリーメモ ---
+function getFreeNotes() {
+  const data = localStorage.getItem('freenotes_' + courseId);
+  return data ? JSON.parse(data) : [];
+}
+function saveFreeNotes(notes) {
+  localStorage.setItem('freenotes_' + courseId, JSON.stringify(notes));
+}
+function renderFreeNotes() {
+  const notes = getFreeNotes();
+  const el = document.getElementById('free-note-list');
+  if (notes.length === 0) {
+    el.innerHTML = '<p class="empty-text">フリーメモがありません</p>';
+    return;
+  }
+  el.innerHTML = notes.map((n, i) => `
+    <div class="note-card">
+      <div class="note-header">
+        <input type="text" class="note-title-input" placeholder="タイトル" value="${n.title||''}" onchange="updateFreeNote(${i},'title',this.value)">
+        <button class="btn-remove" onclick="deleteFreeNote(${i})">✕</button>
+      </div>
+      <textarea class="note-textarea" placeholder="メモを入力..." onchange="updateFreeNote(${i},'content',this.value)">${n.content||''}</textarea>
+    </div>
+  `).join('');
+}
+function addFreeNote() {
+  const notes = getFreeNotes();
+  notes.push({ title: '', content: '' });
+  saveFreeNotes(notes);
+  renderFreeNotes();
+}
+function updateFreeNote(idx, key, val) {
+  const notes = getFreeNotes();
+  notes[idx][key] = val;
+  saveFreeNotes(notes);
+}
+function deleteFreeNote(idx) {
+  const notes = getFreeNotes();
+  notes.splice(idx, 1);
+  saveFreeNotes(notes);
+  renderFreeNotes();
+}
+
+// --- 取得済みトグル ---
+function toggleComplete() {
+  const courses = getCourses();
+  const course = courses.find(c => c.id === courseId);
+  if (!course) return;
+  course.completed = !course.completed;
+  saveCourses(courses);
+  const btn = document.getElementById('btn-complete');
+  if (course.completed) {
+    btn.textContent = '✓ 取得済み';
+    btn.classList.add('completed');
+  } else {
+    btn.textContent = '単位を取得済みにする';
+    btn.classList.remove('completed');
+  }
+}
+
+// 初期状態を反映
+document.addEventListener('DOMContentLoaded', function() {
+  const course = getCourses().find(c => c.id === courseId);
+  if (course && course.completed) {
+    const btn = document.getElementById('btn-complete');
+    if (btn) { btn.textContent = '✓ 取得済み'; btn.classList.add('completed'); }
+  }
+}, { once: false });
