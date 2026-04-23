@@ -346,3 +346,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btn) { btn.textContent = '✓ 取得済み'; btn.classList.add('completed'); }
   }
 }, { once: false });
+
+// --- 授業削除 ---
+function deleteCourseAndGoBack() {
+  if (!confirm('この授業を削除しますか？\n関連する課題・メモ・出席記録も全て削除されます。')) return;
+  deleteCourse(courseId);
+  localStorage.removeItem('eval_' + courseId);
+  localStorage.removeItem('attendance_' + courseId);
+  localStorage.removeItem('sessions_' + courseId);
+  localStorage.removeItem('freenotes_' + courseId);
+  location.href = 'index.html';
+}
