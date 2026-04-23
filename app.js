@@ -205,7 +205,7 @@ function updateDashboard() {
   document.getElementById('credit-count').textContent = totalCredits;
 }
 
-// --- 授業詳細（フェーズ3で実装） ---
+// --- 授業詳細 ---
 function openCourseDetail(courseId) {
-  alert('授業詳細はフェーズ3で実装します！');
+  location.href = 'course.html?id=' + courseId;
 }
